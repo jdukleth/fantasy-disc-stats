@@ -5,8 +5,6 @@ import fs from 'fs'
 import players from './players.js'
 
 const getPlayerStats = async (player) => {
-  let playerRowData = [player.name, player.rating]
-
   const url = `https://www.pdga.com/player/${player.pdgaNumber}/stats/2021`
   const { data } = await axios.get(url)
   const dom = parse(data)
@@ -18,17 +16,25 @@ const getPlayerStats = async (player) => {
     const priorDgptEventsCount = priorDgptEvents.length
     const averageDgptPriorPlacement = getAverageDgptPriorPlacement(priorDgptEvents, priorDgptEventsCount)
 
-    playerRowData = [
-      ...playerRowData,
+    return [
+      player.name,
+      player.rating,
       upcomingDgptEventsCount,
       priorDgptEventsCount,
-      averageDgptPriorPlacement
+      averageDgptPriorPlacement,
+      player.pdgaNumber
     ]
-  } else {
-    playerRowData = [...playerRowData, 'EXPIRED', 'EXPIRED', 'EXPIRED']
   }
 
-  return [...playerRowData, player.pdgaNumber]
+  // membership expired / revoked
+  return [
+    player.name,
+    player.rating,
+    memberStatus,
+    memberStatus,
+    memberStatus,
+    player.pdgaNumber
+  ]
 }
 
 const getMemberStatus = (dom) => {
@@ -74,11 +80,9 @@ const run = async () => {
   const stream = format({ headers: csvHeaders })
   const csvFile = fs.createWriteStream('player-data.csv')
   stream.pipe(csvFile)
-  let csvRows = []
 
   for await (const player of players) {
     const playerRowData = await getPlayerStats(player)
-    csvRows.push(playerRowData)
     console.log(playerRowData)
     stream.write(playerRowData)
   }
