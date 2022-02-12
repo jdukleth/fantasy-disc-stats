@@ -15,7 +15,7 @@ const getPlayerStats = async (player) => {
   if (memberStatus === 'Current') {
     const upcomingDgptEventsCount = getUpcomingDgptEventsCount(dom)
     const priorDgptEvents = getPriorDgptEvents(dom)
-    const priorDgptEventsCount = getPriorDgptEventsCount(priorDgptEvents)
+    const priorDgptEventsCount = priorDgptEvents.length
     const averageDgptPriorPlacement = getAverageDgptPriorPlacement(priorDgptEvents, priorDgptEventsCount)
 
     playerRowData = [
@@ -49,17 +49,9 @@ const getPriorDgptEvents = (dom) => {
   const playerResults = dom.querySelector('#player-results-mpo')
   const playerResultsHtml = playerResults ? playerResults.innerHTML : ''
   const eventRows = playerResultsHtml.match(/\<tr.{0,}/g) || []
-  const dgptEvents = eventRows.filter((rowDom) => {
-    return rowDom.match(/\>DGPT /g)
-  })
+  const dgptEvents = eventRows.filter((rowDom) => rowDom.match(/\>DGPT /g))
 
   return dgptEvents
-}
-
-const getPriorDgptEventsCount = (dgptEvents) => {
-  const priorDgptEventsCount = dgptEvents.length
-
-  return priorDgptEventsCount
 }
 
 const getAverageDgptPriorPlacement = (dgptEvents, dgptPriorEventsCount) => {
@@ -69,6 +61,7 @@ const getAverageDgptPriorPlacement = (dgptEvents, dgptPriorEventsCount) => {
     
     return acc + dgptPlacement
   }, 0)
+
   const averageDgptPriorPlacement = dgptPriorEventsCount
     ? Math.round(sumOfDgptPriorPlacements / dgptPriorEventsCount)
     : ''
