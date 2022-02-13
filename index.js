@@ -9,33 +9,34 @@ const getPlayerStats = async (player) => {
   const { data } = await axios.get(url)
   const dom = parse(data)
   const memberStatus = getMemberStatus(dom)
+  const playerInfo = [
+    player.name,
+    player.rating,
+    player.pdgaNumber,
+  ]
 
   if (memberStatus === 'Current') {
-    const upcomingDgptEvents = getUpcomingDgptEventsCount(dom)
+    const upcomingDgptEvents = getUpcomingDgptEvents(dom)
     const upcomingDgptEventsCount = upcomingDgptEvents.length
     const priorDgptEvents = getPriorDgptEvents(dom)
     const priorDgptEventsCount = priorDgptEvents.length
+    const targetEventPlace = getTargetEventPlace(upcomingDgptEvents, priorDgptEvents)
     const averageDgptPriorPlacement = getAverageDgptPriorPlacement(priorDgptEvents, priorDgptEventsCount)
-
-    return [
-      player.name,
-      player.rating,
+    const playerStats = [
       upcomingDgptEventsCount,
       priorDgptEventsCount,
       averageDgptPriorPlacement,
-      player.pdgaNumber
+    ]
+
+    // skip player if they aren't registered for the target event
+    if (!targetEventPlace) return false
+
+    return [
+      ...playerInfo,
+      ...playerStats,
+      targetEventPlace
     ]
   }
-
-  // membership expired / revoked
-  return [
-    player.name,
-    player.rating,
-    memberStatus,
-    memberStatus,
-    memberStatus,
-    player.pdgaNumber
-  ]
 }
 
 const getMemberStatus = (dom) => {
@@ -47,7 +48,8 @@ const getMemberStatus = (dom) => {
 const getUpcomingDgptEvents = (dom) => {
   const upcomingEvents = dom.querySelector('.upcoming-events')
   const upcomingEventsHtml = upcomingEvents ? upcomingEvents.innerHTML : ''
-  const upcomingDgptEvents = (upcomingEventsHtml.match(/\>DGPT /g) || [])
+  const eventRows = upcomingEventsHtml.match(/\<li(.*?)\/li\>/g) || []
+  const upcomingDgptEvents = eventRows.filter((rowDom) => rowDom.match(/\>DGPT /g))
 
   return upcomingDgptEvents
 }
@@ -76,8 +78,24 @@ const getAverageDgptPriorPlacement = (dgptEvents, dgptPriorEventsCount) => {
   return averageDgptPriorPlacement
 }
 
+const getTargetEventPlace = (upcomingDgptEvents, priorDgptEvents) => {
+  const targetEventName = process.env.SPECIFIC_EVENT_NAME
+  if (!targetEventName) return 'n/a'
+
+  const isAttending = upcomingDgptEvents.find((event) => event.includes(targetEventName))
+  if (!isAttending) return false
+
+  const eventPriorName = process.env.PRIOR_EVENT_NAME
+  const priorEventMatch = priorDgptEvents.filter((event) => event.includes(eventPriorName))
+  if (!priorEventMatch.length) return '-'
+  const eventPriorPlaceDom = parse(priorEventMatch[0])
+  const eventPriorPlace = parseInt(eventPriorPlaceDom.querySelector('.place').innerHTML)
+
+  return eventPriorPlace
+}
+
 const run = async () => {
-  const csvHeaders = ['PLAYER', 'RATING', '2022 EVENTS', '2021 EVENTS', '2021 AVG PLACE', 'PDGA #']
+  const csvHeaders = ['PLAYER', 'RATING', 'PDGA #', '2022 EVENTS', '2021 EVENTS', '2021 AVG PLACE', '2021 TARGET PLACE']
   const stream = format({ headers: csvHeaders })
   const csvFile = await fs.createWriteStream(process.env.OUTPUT_FILE)
   const { default: players } = await import(`./${process.env.PLAYERS_FILE}`)
