@@ -1,8 +1,8 @@
+import 'dotenv/config'
+import fs from 'fs'
 import axios from 'axios'
 import { parse } from 'node-html-parser'
 import { format } from '@fast-csv/format'
-import fs from 'fs'
-import players from './players.js'
 
 const getPlayerStats = async (player) => {
   const url = `https://www.pdga.com/player/${player.pdgaNumber}/stats/2021`
@@ -11,7 +11,8 @@ const getPlayerStats = async (player) => {
   const memberStatus = getMemberStatus(dom)
 
   if (memberStatus === 'Current') {
-    const upcomingDgptEventsCount = getUpcomingDgptEventsCount(dom)
+    const upcomingDgptEvents = getUpcomingDgptEventsCount(dom)
+    const upcomingDgptEventsCount = upcomingDgptEvents.length
     const priorDgptEvents = getPriorDgptEvents(dom)
     const priorDgptEventsCount = priorDgptEvents.length
     const averageDgptPriorPlacement = getAverageDgptPriorPlacement(priorDgptEvents, priorDgptEventsCount)
@@ -43,12 +44,12 @@ const getMemberStatus = (dom) => {
   return status
 }
 
-const getUpcomingDgptEventsCount = (dom) => {
+const getUpcomingDgptEvents = (dom) => {
   const upcomingEvents = dom.querySelector('.upcoming-events')
   const upcomingEventsHtml = upcomingEvents ? upcomingEvents.innerHTML : ''
-  const upcomingDgptCount = (upcomingEventsHtml.match(/\>DGPT /g) || []).length
+  const upcomingDgptEvents = (upcomingEventsHtml.match(/\>DGPT /g) || [])
 
-  return upcomingDgptCount
+  return upcomingDgptEvents
 }
 
 const getPriorDgptEvents = (dom) => {
@@ -78,13 +79,17 @@ const getAverageDgptPriorPlacement = (dgptEvents, dgptPriorEventsCount) => {
 const run = async () => {
   const csvHeaders = ['PLAYER', 'RATING', '2022 EVENTS', '2021 EVENTS', '2021 AVG PLACE', 'PDGA #']
   const stream = format({ headers: csvHeaders })
-  const csvFile = fs.createWriteStream('player-data.csv')
+  const csvFile = await fs.createWriteStream(process.env.OUTPUT_FILE)
+  const { default: players } = await import(`./${process.env.PLAYERS_FILE}`)
   stream.pipe(csvFile)
 
   for await (const player of players) {
     const playerRowData = await getPlayerStats(player)
-    console.log(playerRowData)
-    stream.write(playerRowData)
+
+    if (playerRowData) {
+      console.log(playerRowData)
+      stream.write(playerRowData)
+    }
   }
 
   stream.end()

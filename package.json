@@ -12,6 +12,7 @@
   "dependencies": {
     "@fast-csv/format": "^4.3.5",
     "axios": "^0.25.0",
+    "dotenv": "^16.0.0",
     "fs": "0.0.1-security",
     "node-html-parser": "^5.2.0"
   }
