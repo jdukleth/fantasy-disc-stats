@@ -5,7 +5,7 @@ import { parse } from 'node-html-parser'
 import { format } from '@fast-csv/format'
 
 const getPlayerStats = async (player) => {
-  const url = `https://www.pdga.com/player/${player.pdgaNumber}/stats/2021`
+  const url = `https://www.pdga.com/player/${player.pdgaNumber}/stats/2022`
   const { data } = await axios.get(url)
   const dom = parse(data)
   const memberStatus = getMemberStatus(dom)
@@ -67,7 +67,7 @@ const getAverageDgptPriorPlacement = (dgptEvents, dgptPriorEventsCount) => {
   const sumOfDgptPriorPlacements = dgptEvents.reduce((acc, rowHtml) => {
     const rowDom = parse(rowHtml)
     const dgptPlacement = parseInt(rowDom.querySelector('.place').innerHTML)
-    
+
     return acc + dgptPlacement
   }, 0)
 
@@ -95,7 +95,7 @@ const getTargetEventPlace = (upcomingDgptEvents, priorDgptEvents) => {
 }
 
 const run = async () => {
-  const csvHeaders = ['PLAYER', 'RATING', 'PDGA #', '2022 EVENTS', '2021 EVENTS', '2021 AVG PLACE', '2021 TARGET PLACE']
+  const csvHeaders = ['PLAYER', 'RATING', 'PDGA #', '2023 EVENTS', '2022 EVENTS', '2022 AVG PLACE', '2022 TARGET PLACE']
   const stream = format({ headers: csvHeaders })
   const csvFile = await fs.createWriteStream(process.env.OUTPUT_FILE)
   const { default: players } = await import(`./${process.env.PLAYERS_FILE}`)
